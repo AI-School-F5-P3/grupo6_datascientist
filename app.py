@@ -50,4 +50,3 @@ if st.button("Predecir"):
     # Hacer la predicción
     prediction = predict(input_data)
     st.write(f"La predicción es: {'Derrame cerebral' if prediction[0] == 1 else 'Sin derrame cerebral'}")
-

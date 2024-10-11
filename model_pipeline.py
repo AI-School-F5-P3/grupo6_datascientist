@@ -1,5 +1,3 @@
-# model_pipeline.py
-
 import joblib
 import pandas as pd
 from config import MODEL_PATH, TRANSFORMER_PATH
