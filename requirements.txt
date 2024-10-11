@@ -1,0 +1,24 @@
+# Paquetes esenciales para la aplicación y el modelo
+pandas==1.5.3
+numpy==1.24.3
+scikit-learn==1.2.2
+imbalanced-learn==0.10.1   # Para SMOTE
+joblib==1.3.1
+xgboost==1.7.5
+streamlit==1.24.0
+matplotlib==3.7.1
+
+# Para la conexión con MySQL
+mysql-connector-python==8.1.0
+
+# Manejo de bases de datos
+SQLAlchemy==2.0.15
+
+# Para monitorización y logging
+loguru==0.7.0
+
+# Para transformaciones de datos avanzadas
+power_transformer==0.3.2  # Asumiendo que usas PowerTransformer
+
+# Para despliegue con Docker (si fuera necesario)
+docker==6.1.0
