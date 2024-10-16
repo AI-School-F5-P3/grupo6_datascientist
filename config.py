@@ -6,5 +6,4 @@ basado en un modelo de Machine Learning.
 """
 
 # Otros parámetros del proyecto
-MODEL_PATH = 'models/final_model.joblib'
-TRANSFORMER_PATH = 'models/transformer_pipeline.joblib'
+MODEL_PATH = 'xgb_model_optimized_1.pkl'
