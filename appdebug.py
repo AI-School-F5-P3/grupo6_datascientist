@@ -3,15 +3,14 @@ import pandas as pd
 import joblib
 from xgboost import XGBClassifier
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 
 @st.cache_resource
 def load_model_and_scaler():
     try:
-        scalertotal = joblib.load('scalertotal.joblib')
+        scaler = joblib.load('scaler.pkl')
         model = XGBClassifier()
         model.load_model("xgboost_stroke_model_final.bin")
-        return scalertotal, model
+        return scaler, model
     except Exception as e:
         st.error(f"Error al cargar el modelo: {str(e)}")
         return None, None
@@ -46,8 +45,8 @@ def process_input_data(raw_data):
 def main():
     st.title("🏥 Predicción de Riesgo de Derrame Cerebral")
     
-    scalertotal, loaded_model = load_model_and_scaler()
-    if scalertotal is None or loaded_model is None:
+    scaler, loaded_model = load_model_and_scaler()
+    if scaler is None or loaded_model is None:
         return
     
     # Crear datos de prueba para caso de alto riesgo
@@ -131,7 +130,7 @@ def main():
                 'Residence_type_Rural', 'Residence_type_Urban', 'smoking_status_Unknown',
                 'smoking_status_formerly smoked', 'smoking_status_never smoked', 'smoking_status_smokes'
             ]
-            processed_data_scaled = scalertotal.transform(processed_data[features_to_scale])
+            processed_data_scaled = scaler.transform(processed_data[features_to_scale])
             
             # Convertir a DataFrame
             input_data_scaled = pd.DataFrame(processed_data_scaled, columns=features_to_scale)
@@ -151,7 +150,7 @@ def main():
             st.subheader("Resultados del Análisis")
             risk_percentage = prediction_prob * 100
             
-            col1, col2, col3 = st.columns([1, 2, 1])
+            col1, col2, _ = st.columns([1, 2, 1])
             with col2:
                 st.progress(float(prediction_prob))
                 st.write(f"Probabilidad de riesgo: {risk_percentage:.1f}%")
@@ -171,9 +170,5 @@ def main():
                     - Mantenga una dieta equilibrada
                 """)
                 
-            risk_relative = (prediction_prob / threshold) * 100
-            st.write(f"Riesgo relativo: {risk_relative:.1f}% comparado con el umbral.")
-
-
 if __name__ == "__main__":
     main()
