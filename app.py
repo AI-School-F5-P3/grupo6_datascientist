@@ -1,15 +1,13 @@
-
 import streamlit as st
 import pandas as pd
 import joblib
-import xgboost as xgb
-import numpy as np
+from xgboost import XGBClassifier
+
 
 # Cargar el modelo y el escalador
 age_scaler = joblib.load('age_scaler.joblib')
-xgb_model = xgb.Booster()
-xgb_model.load_model('xgboost_stroke_model_final.bin')
-
+loaded_model = XGBClassifier()
+loaded_model.load_model("xgboost_stroke_model_final.bin")
 
 # Definir un nuevo umbral
 new_threshold = 0.165  # Ajusta este valor según sea necesario
@@ -32,7 +30,7 @@ smoking_status = st.selectbox("Smoking Status", ["formerly smoked", "never smoke
 # Botón para hacer la predicción
 if st.button("Predecir"):
     # Crear el dataframe a partir de las entradas del usuario
-    input_data = pd.DataFrame({
+    raw_input_data = pd.DataFrame({
         'gender': [gender],
         'age': [age],
         'hypertension': [hypertension],
@@ -45,17 +43,15 @@ if st.button("Predecir"):
         'smoking_status': [smoking_status]
     })
 
-    # 2. Preparación de los datos
-    input_data = pd.get_dummies(input_data, columns=['gender', 'ever_married', 'work_type', 'Residence_type', 'smoking_status'])
+    raw_input_data.reset_index(drop=True, inplace=True)
 
-    # Asegurarse de que las columnas dummy que faltan se rellenen con 0
-    expected_cols = ['gender_Female', 'gender_Male', 'ever_married_No', 'ever_married_Yes', 'work_type_Govt_job', 'work_type_Never_worked',
-                     'work_type_Private', 'work_type_Self-employed', 'work_type_children', 'Residence_type_Rural', 'Residence_type_Urban',
-                     'smoking_status_Unknown', 'smoking_status_formerly smoked', 'smoking_status_never smoked', 'smoking_status_smokes']
-
-    for col in expected_cols:
-        if col not in input_data.columns:
-            input_data[col] = 0
+    # 2. Preparación de los datos (generar dummies manualmente)
+    # Inicializar columnas dummy
+    raw_input_data['smoking_status_never smoked'] = 1 if smoking_status == "never smoked" else 0
+    raw_input_data['Residence_type_Rural'] = 1 if residence_type == "Rural" else 0
+    raw_input_data['work_type_Private'] = 1 if work_type == "Private" else 0
+    
+    st.write(raw_input_data)
 
     # Seleccionar solo las características relevantes (important_features)
     important_features = [
@@ -67,14 +63,22 @@ if st.button("Predecir"):
         "heart_disease"
     ]
 
-    input_data = input_data[important_features]
+
+    # Mantener solo las columnas importantes
+    input_data_final = raw_input_data[important_features]
+
 
     # 4. Escalar la edad usando el escalador previamente entrenado
-    input_data['age'] = age_scaler.transform(input_data[['age']])
+    input_data_final.loc[:, 'age'] = age_scaler.transform(input_data_final[['age']]).astype(float)
+    
+    input_data_final.reset_index(drop=True, inplace=True)
+    
+    st.write(input_data_final)
 
     # 5. Realizar la predicción usando el modelo XGBoost
-    dmatrix = xgb.DMatrix(input_data)
-    prediction = xgb_model.predict(dmatrix)
+    prediction = loaded_model.predict_proba(input_data_final)[:, 1]  # Predicción de probabilidad para la clase positiva
+    
+    st.write(prediction)
 
     # Mostrar el resultado considerando el nuevo umbral
     st.subheader("Resultado de la Predicción")
@@ -82,3 +86,4 @@ if st.button("Predecir"):
         st.write(f"El modelo predice que el paciente está en riesgo de tener un derrame cerebral (1). Probabilidad: {prediction[0]:.2f}")
     else:
         st.write(f"El modelo predice que el paciente no está en riesgo de tener un derrame cerebral (0). Probabilidad: {prediction[0]:.2f}")
+
