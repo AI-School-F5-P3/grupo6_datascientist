@@ -121,9 +121,9 @@ def process_input_data(raw_data):
     processed_data['heart_disease'] = raw_data['heart_disease'].iloc[0]
     
     # Procesar variables categóricas
-    processed_data['smoking_status_never smoked'] = (raw_data['smoking_status'].iloc[0] == 'never smoked').astype(int)
-    processed_data['work_type_Private'] = (raw_data['work_type'].iloc[0] == 'Private').astype(int)
-    processed_data['Residence_type_Rural'] = (raw_data['Residence_type'].iloc[0] == 'Rural').astype(int)
+    processed_data['smoking_status_never smoked'] = (raw_data['smoking_status'].iloc[0] == 'never smoked')
+    processed_data['work_type_Private'] = (raw_data['work_type'].iloc[0] == 'Private')
+    processed_data['Residence_type_Rural'] = (raw_data['Residence_type'].iloc[0] == 'Rural')
     
     return processed_data
 
@@ -233,7 +233,7 @@ def main():
                 "Estado de Fumador",
                 VALID_SMOKING_STATUS,
                 help="Historial de consumo de tabaco"
-            )
+            )    
         
         with col3:
             st.markdown("##### Ubicación")
@@ -275,8 +275,12 @@ def main():
                 st.markdown("### Resultados del Análisis")
                 
                 # Mostrar predicción
-                risk_status = "Alto Riesgo" if risk_score > 0.5 else "Bajo Riesgo"
-                st.success(f"Predicción: {risk_status} de Derrame Cerebral")
+                # Mostrar predicción
+                risk_status = "Alto Riesgo" if risk_score > 0.165 else "Bajo Riesgo"
+                risk_color = "red" if risk_score > 0.165 else "green"
+
+                st.markdown(f"<h3 style='color:{risk_color};'>Predicción: {risk_status} de Derrame Cerebral</h3>", unsafe_allow_html=True)
+
                 
                 # Mostrar gráfico de gauge
                 gauge_chart = create_gauge_chart(risk_score, "Probabilidad de Riesgo de Derrame Cerebral")
