@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
-import joblib
 from xgboost import XGBClassifier
-import numpy as np
 import plotly.graph_objects as go
+import numpy as np
 
 # Configuración de la página
 st.set_page_config(
@@ -39,21 +38,71 @@ st.markdown("""
             border-radius: 5px;
             margin-bottom: 1rem;
         }
+        .stButton>button {
+            width: 100%;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted #ccc;
+            cursor: help;
+        }
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
     </style>
 """, unsafe_allow_html=True)
 
+# Constantes y configuración
+VALID_WORK_TYPES = ["Private", "Self-employed", "Govt_job", "children"]
+VALID_SMOKING_STATUS = ["never smoked", "formerly smoked", "smokes", "Unknown"]
+VALID_RESIDENCE_TYPES = ["Urban", "Rural"]
+
 @st.cache_resource
 def load_model():
+    """Cargar el modelo XGBoost."""
     try:
         model = XGBClassifier()
-        model.load_model("xgboost_stroke_model_1.bin")
+        model.load_model("xgboost_stroke_model_final.bin")
         return model
     except Exception as e:
         st.error(f"Error al cargar el modelo: {str(e)}")
         return None
 
+def validate_input_data(input_data):
+    """Validar los datos de entrada."""
+    errors = []
+    
+    # Validar edad
+    if input_data['age'].iloc[0] < 0 or input_data['age'].iloc[0] > 120:
+        errors.append("La edad debe estar entre 0 y 120 años")
+    
+    # Validar trabajo
+    if input_data['work_type'].iloc[0] not in VALID_WORK_TYPES:
+        errors.append("Tipo de trabajo no válido")
+    
+    # Validar estado de fumador
+    if input_data['smoking_status'].iloc[0] not in VALID_SMOKING_STATUS:
+        errors.append("Estado de fumador no válido")
+    
+    # Validar tipo de residencia
+    if input_data['Residence_type'].iloc[0] not in VALID_RESIDENCE_TYPES:
+        errors.append("Tipo de residencia no válido")
+    
+    # Validar valores binarios
+    for field in ['hypertension', 'heart_disease']:
+        if input_data[field].iloc[0] not in [0, 1]:
+            errors.append(f"El campo {field} debe ser 0 o 1")
+    
+    if errors:
+        raise ValueError("\n".join(errors))
+
 def process_input_data(raw_data):
-    """Procesar y preparar los datos de entrada para la predicción."""
+    """
+    Procesar y preparar los datos de entrada para la predicción.
+    Solo procesa las variables necesarias para el modelo final.
+    """
     # Crear DataFrame con las columnas necesarias
     required_columns = [
         'age',
@@ -67,20 +116,16 @@ def process_input_data(raw_data):
     processed_data = pd.DataFrame(0, index=[0], columns=required_columns)
     
     # Copiar características numéricas directamente
-    numeric_features = ['age', 'hypertension', 'heart_disease']
-    for feature in numeric_features:
-        processed_data[feature] = raw_data[feature].iloc[0]
+    processed_data['age'] = raw_data['age'].iloc[0]
+    processed_data['hypertension'] = raw_data['hypertension'].iloc[0]
+    processed_data['heart_disease'] = raw_data['heart_disease'].iloc[0]
     
-    # Procesar estado de fumador
-    processed_data['smoking_status_never smoked'] = int(raw_data['smoking_status'].iloc[0] == 'never smoked')
+    # Procesar variables categóricas
+    processed_data['smoking_status_never smoked'] = (raw_data['smoking_status'].iloc[0] == 'never smoked').astype(int)
+    processed_data['work_type_Private'] = (raw_data['work_type'].iloc[0] == 'Private').astype(int)
+    processed_data['Residence_type_Rural'] = (raw_data['Residence_type'].iloc[0] == 'Rural').astype(int)
     
-    # Procesar tipo de trabajo
-    processed_data['work_type_Private'] = int(raw_data['work_type'].iloc[0] == 'Private')
-    
-    # Procesar tipo de residencia
-    processed_data['Residence_type_Rural'] = int(raw_data['Residence_type'].iloc[0] == 'Rural')
-    
-    return processed_data[required_columns]
+    return processed_data
 
 def create_gauge_chart(value, title):
     """Crear un gráfico de gauge con Plotly."""
@@ -107,21 +152,34 @@ def create_gauge_chart(value, title):
     fig.update_layout(height=250)
     return fig
 
+def show_field_info(title, description):
+    """Mostrar información sobre un campo con tooltip."""
+    st.markdown(f"""
+        <div class="tooltip">
+            {title}
+            <span class="tooltiptext">{description}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
 def main():
     st.markdown('<h1 class="main-header">🏥 Predictor de Riesgo de Derrame Cerebral</h1>', unsafe_allow_html=True)
     
     # Cargar modelo
-    loaded_model = load_model()
-    if loaded_model is None:
+    model = load_model()
+    if model is None:
         return
     
     # Sidebar con información
     with st.sidebar:
         st.markdown("### ℹ️ Información del Modelo")
         st.info("""
-        Este modelo utiliza técnicas de aprendizaje automático (XGBoost) 
-        para predecir el riesgo de derrame cerebral basado en diversos 
-        factores de salud y estilo de vida.
+        Este modelo de XGBoost predice el riesgo de derrame cerebral basado en factores clave:
+        - Edad
+        - Estado de fumador
+        - Hipertensión
+        - Tipo de trabajo
+        - Tipo de residencia
+        - Enfermedad cardíaca
         """)
         
         st.markdown("### 🎯 Precisión del Modelo")
@@ -132,61 +190,115 @@ def main():
         st.warning("""
         Esta herramienta es solo para fines educativos e informativos.
         No sustituye el diagnóstico médico profesional.
+        Consulte siempre con un profesional de la salud.
         """)
     
-    # Entrada manual con diseño mejorado
-    st.markdown('<p class="subheader">📝 Información Personal</p>', unsafe_allow_html=True)
+    # Formulario de entrada
+    st.markdown('<p class="subheader">📝 Información del Paciente</p>', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns(3)
+    with st.form("patient_data_form"):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("##### Datos Demográficos")
+            age = st.number_input("Edad", 
+                                min_value=0, 
+                                max_value=120, 
+                                value=25,
+                                help="Edad del paciente en años")
+            
+            hypertension = st.selectbox(
+                "Hipertensión", 
+                [0, 1],
+                format_func=lambda x: "Sí" if x == 1 else "No",
+                help="¿El paciente tiene hipertensión diagnosticada?"
+            )
+            
+            heart_disease = st.selectbox(
+                "Enfermedad Cardíaca",
+                [0, 1],
+                format_func=lambda x: "Sí" if x == 1 else "No",
+                help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?"
+            )
+        
+        with col2:
+            st.markdown("##### Estilo de Vida")
+            work_type = st.selectbox(
+                "Tipo de Trabajo",
+                VALID_WORK_TYPES,
+                help="Sector laboral principal del paciente"
+            )
+            
+            smoking_status = st.selectbox(
+                "Estado de Fumador",
+                VALID_SMOKING_STATUS,
+                help="Historial de consumo de tabaco"
+            )
+        
+        with col3:
+            st.markdown("##### Ubicación")
+            residence_type = st.selectbox(
+                "Tipo de Residencia",
+                VALID_RESIDENCE_TYPES,
+                help="Área de residencia del paciente"
+            )
+        
+        # Botón de predicción
+        predict_button = st.form_submit_button("Realizar Predicción", type="primary")
     
-    with col1:
-        gender = st.selectbox("Género", ["Male", "Female"])
-        age = st.number_input("Edad", min_value=1, max_value=120, value=25)
-        hypertension = st.selectbox("Hipertensión", [0, 1], 
-                                  format_func=lambda x: "Sí" if x == 1 else "No")
-    
-    with col2:
-        heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], 
-                                   format_func=lambda x: "Sí" if x == 1 else "No")
-        avg_glucose_level = st.number_input("Nivel de Glucosa Promedio", 
-                                          min_value=0.0, value=100.0)
-        bmi = st.number_input("Índice de Masa Corporal (IMC)", 
-                            min_value=0.0, value=25.0)
-    
-    with col3:
-        ever_married = st.selectbox("¿Alguna vez casado?", ["Yes", "No"])
-        work_type = st.selectbox("Tipo de Trabajo", 
-                               ["Private", "Self-employed", "Govt_job", "children"])
-        smoking_status = st.selectbox("Estado de Fumador", 
-                                    ["never smoked", "formerly smoked", "smokes", "Unknown"])
-    
-    residence_type = st.selectbox("Tipo de Residencia", ["Urban", "Rural"])
-    
-    input_data = pd.DataFrame({
-        'gender': [gender], 'age': [age], 'hypertension': [hypertension],
-        'heart_disease': [heart_disease], 'ever_married': [ever_married],
-        'work_type': [work_type], 'Residence_type': [residence_type],
-        'avg_glucose_level': [avg_glucose_level], 'bmi': [bmi],
-        'smoking_status': [smoking_status]
-    })
+    # Procesar predicción cuando se presiona el botón
+    if predict_button:
+        try:
+            # Crear DataFrame con los datos de entrada
+            input_data = pd.DataFrame({
+                'age': [age],
+                'hypertension': [hypertension],
+                'heart_disease': [heart_disease],
+                'work_type': [work_type],
+                'Residence_type': [residence_type],
+                'smoking_status': [smoking_status]
+            })
+            
+            # Validar datos
+            validate_input_data(input_data)
+            
+            # Mostrar spinner durante el procesamiento
+            with st.spinner("Analizando factores de riesgo..."):
+                # Procesar datos
+                processed_data = process_input_data(input_data)
+                
+                # Realizar predicción
+                prediction = model.predict_proba(processed_data)
+                risk_score = prediction[0][1]  # Probabilidad de la clase positiva
+                
+                # Mostrar resultados
+                st.markdown("### Resultados del Análisis")
+                
+                # Mostrar predicción
+                risk_status = "Alto Riesgo" if risk_score > 0.5 else "Bajo Riesgo"
+                st.success(f"Predicción: {risk_status} de Derrame Cerebral")
+                
+                # Mostrar gráfico de gauge
+                gauge_chart = create_gauge_chart(risk_score, "Probabilidad de Riesgo de Derrame Cerebral")
+                st.plotly_chart(gauge_chart, use_container_width=True)
+                
+                # Mostrar factores de riesgo principales
+                st.markdown("#### Factores de Riesgo Principales")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.info("✔️ Edad" if age > 65 else "✅ Edad dentro del rango normal")
+                    st.info("⚠️ Hipertensión presente" if hypertension else "✅ Sin hipertensión")
+                    st.info("⚠️ Enfermedad cardíaca presente" if heart_disease else "✅ Sin enfermedad cardíaca")
+                with col2:
+                    st.info("⚠️ Fumador activo" if smoking_status == "smokes" else "✅ No fumador o ex-fumador")
+                    st.info("ℹ️ Residencia: " + residence_type)
+                    st.info("ℹ️ Tipo de trabajo: " + work_type)
+        
+        except ValueError as e:
+            st.error(f"Error en los datos de entrada:\n{str(e)}")
+        except Exception as e:
+            st.error(f"Error inesperado: {str(e)}")
+            st.error("Por favor, contacte al equipo de soporte si el problema persiste.")
 
-    if st.button("Realizar Predicción", type="primary"):
-        with st.spinner("Analizando factores de riesgo..."):
-            # Procesar datos
-            processed_data = process_input_data(input_data)
-
-            # Realizar la predicción
-            prediction = loaded_model.predict(processed_data)
-            risk_score = prediction[0]
-
-            # Mostrar resultados
-            st.success(f"Predicción: {'Riesgo de Derrame Cerebral' if risk_score == 1 else 'Sin Riesgo de Derrame Cerebral'}")
-
-            # Crear y mostrar gráfico gauge
-            gauge_chart = create_gauge_chart(risk_score, "Nivel de Riesgo de Derrame Cerebral")
-            st.plotly_chart(gauge_chart)
-
-# Ejecutar el flujo principal de la aplicación
 if __name__ == "__main__":
     main()
-
