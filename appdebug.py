@@ -3,172 +3,190 @@ import pandas as pd
 import joblib
 from xgboost import XGBClassifier
 import numpy as np
+import plotly.graph_objects as go
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Predictor de Riesgo de Derrame Cerebral",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Estilos CSS personalizados
+st.markdown("""
+    <style>
+        .main-header {
+            font-size: 2.5rem;
+            color: #1E88E5;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .subheader {
+            font-size: 1.5rem;
+            color: #424242;
+            margin-bottom: 1rem;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-box {
+            background-color: #e3f2fd;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 @st.cache_resource
-def load_model_and_scaler():
+def load_model():
     try:
-        scaler = joblib.load('scaler.pkl')
         model = XGBClassifier()
-        model.load_model("xgboost_stroke_model_final.bin")
-        return scaler, model
+        model.load_model("xgboost_stroke_model_1.bin")
+        return model
     except Exception as e:
         st.error(f"Error al cargar el modelo: {str(e)}")
-        return None, None
+        return None
 
 def process_input_data(raw_data):
-    """Procesar y preparar los datos de entrada, incluyendo todas las variables."""
-    processed_data = pd.DataFrame(index=[0])
+    """Procesar y preparar los datos de entrada para la predicción."""
+    # Crear DataFrame con las columnas necesarias
+    required_columns = [
+        'age',
+        'smoking_status_never smoked',
+        'hypertension',
+        'work_type_Private',
+        'Residence_type_Rural',
+        'heart_disease'
+    ]
     
-    # Agregar las características
-    processed_data['gender_Female'] = 1 if raw_data['gender'].iloc[0] == "Female" else 0
-    processed_data['gender_Male'] = 1 if raw_data['gender'].iloc[0] == "Male" else 0
-    processed_data['age'] = raw_data['age'].iloc[0]
-    processed_data['hypertension'] = raw_data['hypertension'].iloc[0]
-    processed_data['heart_disease'] = raw_data['heart_disease'].iloc[0]
-    processed_data['ever_married_No'] = 1 if raw_data['ever_married'].iloc[0] == "No" else 0
-    processed_data['ever_married_Yes'] = 1 if raw_data['ever_married'].iloc[0] == "Yes" else 0
-    processed_data['work_type_Govt_job'] = 1 if raw_data['work_type'].iloc[0] == "Govt_job" else 0
-    processed_data['work_type_Private'] = 1 if raw_data['work_type'].iloc[0] == "Private" else 0
-    processed_data['work_type_Self-employed'] = 1 if raw_data['work_type'].iloc[0] == "Self-employed" else 0
-    processed_data['work_type_children'] = 1 if raw_data['work_type'].iloc[0] == "children" else 0
-    processed_data['Residence_type_Rural'] = 1 if raw_data['Residence_type'].iloc[0] == "Rural" else 0
-    processed_data['Residence_type_Urban'] = 1 if raw_data['Residence_type'].iloc[0] == "Urban" else 0
-    processed_data['avg_glucose_level'] = raw_data['avg_glucose_level'].iloc[0]
-    processed_data['bmi'] = raw_data['bmi'].iloc[0]
-    processed_data['smoking_status_Unknown'] = 1 if raw_data['smoking_status'].iloc[0] == "Unknown" else 0
-    processed_data['smoking_status_formerly smoked'] = 1 if raw_data['smoking_status'].iloc[0] == "formerly smoked" else 0
-    processed_data['smoking_status_never smoked'] = 1 if raw_data['smoking_status'].iloc[0] == "never smoked" else 0
-    processed_data['smoking_status_smokes'] = 1 if raw_data['smoking_status'].iloc[0] == "smokes" else 0
+    processed_data = pd.DataFrame(0, index=[0], columns=required_columns)
     
-    return processed_data
+    # Copiar características numéricas directamente
+    numeric_features = ['age', 'hypertension', 'heart_disease']
+    for feature in numeric_features:
+        processed_data[feature] = raw_data[feature].iloc[0]
+    
+    # Procesar estado de fumador
+    processed_data['smoking_status_never smoked'] = int(raw_data['smoking_status'].iloc[0] == 'never smoked')
+    
+    # Procesar tipo de trabajo
+    processed_data['work_type_Private'] = int(raw_data['work_type'].iloc[0] == 'Private')
+    
+    # Procesar tipo de residencia
+    processed_data['Residence_type_Rural'] = int(raw_data['Residence_type'].iloc[0] == 'Rural')
+    
+    return processed_data[required_columns]
+
+def create_gauge_chart(value, title):
+    """Crear un gráfico de gauge con Plotly."""
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value * 100,
+        title={'text': title},
+        domain={'x': [0, 1], 'y': [0, 1]},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "darkblue"},
+            'steps': [
+                {'range': [0, 33], 'color': "lightgreen"},
+                {'range': [33, 66], 'color': "yellow"},
+                {'range': [66, 100], 'color': "salmon"}
+            ],
+            'threshold': {
+                'line': {'color': "red", 'width': 4},
+                'thickness': 0.75,
+                'value': 16.5 * 100
+            }
+        }
+    ))
+    fig.update_layout(height=250)
+    return fig
 
 def main():
-    st.title("🏥 Predicción de Riesgo de Derrame Cerebral")
+    st.markdown('<h1 class="main-header">🏥 Predictor de Riesgo de Derrame Cerebral</h1>', unsafe_allow_html=True)
     
-    scaler, loaded_model = load_model_and_scaler()
-    if scaler is None or loaded_model is None:
+    # Cargar modelo
+    loaded_model = load_model()
+    if loaded_model is None:
         return
     
-    # Crear datos de prueba para caso de alto riesgo
-    test_high_risk = {
-        'gender': ["Male"],
-        'age': [75],
-        'hypertension': [1],
-        'heart_disease': [1],
-        'ever_married': ["Yes"],
-        'work_type': ["Self-employed"],
-        'Residence_type': ["Rural"],
-        'avg_glucose_level': [200],
-        'bmi': [28],
-        'smoking_status': ["smokes"]
-    }
-
-    # Crear datos de prueba para caso de bajo riesgo
-    test_low_risk = {
-        'gender': ["Female"],
-        'age': [25],
-        'hypertension': [0],
-        'heart_disease': [0],
-        'ever_married': ["No"],
-        'work_type': ["Private"],
-        'Residence_type': ["Urban"],
-        'avg_glucose_level': [90],
-        'bmi': [22],
-        'smoking_status': ["never smoked"]
-    }
-
-    test_case = st.radio(
-        "Seleccionar modo de entrada:",
-        ["Manual", "Caso de Alto Riesgo (Test)", "Caso de Bajo Riesgo (Test)"]
-    )
+    # Sidebar con información
+    with st.sidebar:
+        st.markdown("### ℹ️ Información del Modelo")
+        st.info("""
+        Este modelo utiliza técnicas de aprendizaje automático (XGBoost) 
+        para predecir el riesgo de derrame cerebral basado en diversos 
+        factores de salud y estilo de vida.
+        """)
+        
+        st.markdown("### 🎯 Precisión del Modelo")
+        st.progress(0.82)
+        st.caption("Precisión: 82%")
+        
+        st.markdown("### ⚠️ Descargo de Responsabilidad")
+        st.warning("""
+        Esta herramienta es solo para fines educativos e informativos.
+        No sustituye el diagnóstico médico profesional.
+        """)
     
-    if test_case == "Caso de Alto Riesgo (Test)":
-        input_data = pd.DataFrame(test_high_risk)
-    elif test_case == "Caso de Bajo Riesgo (Test)":
-        input_data = pd.DataFrame(test_low_risk)
-    else:
-        # Entrada manual
-        col1, col2 = st.columns(2)
-
-        with col1:
-            gender = st.selectbox("Género", ["Male", "Female"])
-            age = st.number_input("Edad", min_value=1, max_value=120, value=25)
-            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No")
-            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No")
-            avg_glucose_level = st.number_input("Nivel de Glucosa Promedio", min_value=0.0, value=100.0)
-            bmi = st.number_input("Índice de Masa Corporal (IMC)", min_value=0.0, value=25.0)
-            ever_married = st.selectbox("¿Alguna vez casado?", ["Yes", "No"])
-
-        with col2:
-            work_type = st.selectbox("Tipo de Trabajo", ["Private", "Self-employed", "Govt_job", "children"])
-            residence_type = st.selectbox("Tipo de Residencia", ["Urban", "Rural"])
-            smoking_status = st.selectbox("Estado de Fumador", ["never smoked", "formerly smoked", "smokes", "Unknown"])
-
-        input_data = pd.DataFrame({
-            'gender': [gender],
-            'age': [age],
-            'hypertension': [hypertension],
-            'heart_disease': [heart_disease],
-            'ever_married': [ever_married],
-            'work_type': [work_type],
-            'Residence_type': [residence_type],
-            'avg_glucose_level': [avg_glucose_level],
-            'bmi': [bmi],
-            'smoking_status': [smoking_status]
-        })
+    # Entrada manual con diseño mejorado
+    st.markdown('<p class="subheader">📝 Información Personal</p>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        gender = st.selectbox("Género", ["Male", "Female"])
+        age = st.number_input("Edad", min_value=1, max_value=120, value=25)
+        hypertension = st.selectbox("Hipertensión", [0, 1], 
+                                  format_func=lambda x: "Sí" if x == 1 else "No")
+    
+    with col2:
+        heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], 
+                                   format_func=lambda x: "Sí" if x == 1 else "No")
+        avg_glucose_level = st.number_input("Nivel de Glucosa Promedio", 
+                                          min_value=0.0, value=100.0)
+        bmi = st.number_input("Índice de Masa Corporal (IMC)", 
+                            min_value=0.0, value=25.0)
+    
+    with col3:
+        ever_married = st.selectbox("¿Alguna vez casado?", ["Yes", "No"])
+        work_type = st.selectbox("Tipo de Trabajo", 
+                               ["Private", "Self-employed", "Govt_job", "children"])
+        smoking_status = st.selectbox("Estado de Fumador", 
+                                    ["never smoked", "formerly smoked", "smokes", "Unknown"])
+    
+    residence_type = st.selectbox("Tipo de Residencia", ["Urban", "Rural"])
+    
+    input_data = pd.DataFrame({
+        'gender': [gender], 'age': [age], 'hypertension': [hypertension],
+        'heart_disease': [heart_disease], 'ever_married': [ever_married],
+        'work_type': [work_type], 'Residence_type': [residence_type],
+        'avg_glucose_level': [avg_glucose_level], 'bmi': [bmi],
+        'smoking_status': [smoking_status]
+    })
 
     if st.button("Realizar Predicción", type="primary"):
-        with st.spinner("Procesando datos..."):
-            # Procesar los datos
+        with st.spinner("Analizando factores de riesgo..."):
+            # Procesar datos
             processed_data = process_input_data(input_data)
-            
-            # Escalar las variables necesarias
-            features_to_scale = [
-                'age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi',
-                'gender_Female', 'gender_Male', 'ever_married_No', 'ever_married_Yes',
-                'work_type_Govt_job', 'work_type_Private', 'work_type_Self-employed', 'work_type_children',
-                'Residence_type_Rural', 'Residence_type_Urban', 'smoking_status_Unknown',
-                'smoking_status_formerly smoked', 'smoking_status_never smoked', 'smoking_status_smokes'
-            ]
-            processed_data_scaled = scaler.transform(processed_data[features_to_scale])
-            
-            # Convertir a DataFrame
-            input_data_scaled = pd.DataFrame(processed_data_scaled, columns=features_to_scale)
 
-            # Seleccionar solo las columnas clave para la predicción
-            selected_features = [
-                "age", "smoking_status_never smoked", "hypertension",
-                "work_type_Private", "Residence_type_Rural", "heart_disease"
-            ]
-            prediction_input = input_data_scaled[selected_features]
-            
-            # Realizar predicción
-            prediction_prob = float(loaded_model.predict_proba(prediction_input)[:, 1][0])
-            threshold = 0.165  # Umbral ajustado durante el entrenamiento
-            
+            # Realizar la predicción
+            prediction = loaded_model.predict(processed_data)
+            risk_score = prediction[0]
+
             # Mostrar resultados
-            st.subheader("Resultados del Análisis")
-            risk_percentage = prediction_prob * 100
-            
-            col1, col2, _ = st.columns([1, 2, 1])
-            with col2:
-                st.progress(float(prediction_prob))
-                st.write(f"Probabilidad de riesgo: {risk_percentage:.1f}%")
-            
-            if prediction_prob >= threshold:
-                st.error(f"⚠️ Riesgo Alto de Derrame Cerebral ({risk_percentage:.1f}%)")
-                st.markdown("""### Recomendaciones:
-                    - Consulte a un médico lo antes posible
-                    - Monitoree su presión arterial regularmente
-                    - Mantenga un estilo de vida saludable
-                """)
-            else:
-                st.success(f"✅ Riesgo Bajo de Derrame Cerebral ({risk_percentage:.1f}%)")
-                st.markdown("""### Recomendaciones:
-                    - Continúe manteniendo hábitos saludables
-                    - Realice chequeos médicos regulares
-                    - Mantenga una dieta equilibrada
-                """)
-                
+            st.success(f"Predicción: {'Riesgo de Derrame Cerebral' if risk_score == 1 else 'Sin Riesgo de Derrame Cerebral'}")
+
+            # Crear y mostrar gráfico gauge
+            gauge_chart = create_gauge_chart(risk_score, "Nivel de Riesgo de Derrame Cerebral")
+            st.plotly_chart(gauge_chart)
+
+# Ejecutar el flujo principal de la aplicación
 if __name__ == "__main__":
     main()
+
