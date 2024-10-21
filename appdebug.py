@@ -206,6 +206,55 @@ def main():
                                 max_value=120, 
                                 value=25,
                                 help="Edad del paciente en años")
+
+            st.gender = st.selectbox(
+                "Género",
+                ["Masculino", "Femenino"],
+                help="Género del paciente"
+            )
+
+            st.ever_married = st.selectbox(
+                "Estado Civil",
+                ["Sí", "No"],
+                help="¿El paciente ha estado alguna vez casado?"
+            )
+
+        with col2:
+            st.markdown("##### Estilo de Vida")
+            work_type = st.selectbox(
+                "Tipo de Trabajo",
+                VALID_WORK_TYPES,
+                help="Sector laboral principal del paciente"
+            )
+            
+            smoking_status = st.selectbox(
+                "Estado de Fumador",
+                VALID_SMOKING_STATUS,
+                help="Historial de consumo de tabaco"
+            )
+
+            st.avg_glucose_level = st.number_input(
+                "Nivel Promedio de Glucosa", 
+                min_value=0.0, 
+                max_value=300.0, 
+                value=100.0,
+                help="Nivel promedio de glucosa en sangre"
+            )
+
+        with col3:
+            st.markdown("##### Ubicación y Salud")
+            residence_type = st.selectbox(
+                "Tipo de Residencia",
+                VALID_RESIDENCE_TYPES,
+                help="Área de residencia del paciente"
+            )
+            
+            st.bmi = st.selectbox(
+                "Índice de Masa Corporal (BMI)",
+                [1, 0],
+                format_func=lambda x: "Sobrepeso" if x == 1 else "Normal",
+                help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)"
+            )
             
             hypertension = st.selectbox(
                 "Hipertensión", 
@@ -220,28 +269,7 @@ def main():
                 format_func=lambda x: "Sí" if x == 1 else "No",
                 help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?"
             )
-        
-        with col2:
-            st.markdown("##### Estilo de Vida")
-            work_type = st.selectbox(
-                "Tipo de Trabajo",
-                VALID_WORK_TYPES,
-                help="Sector laboral principal del paciente"
-            )
-            
-            smoking_status = st.selectbox(
-                "Estado de Fumador",
-                VALID_SMOKING_STATUS,
-                help="Historial de consumo de tabaco"
-            )    
-        
-        with col3:
-            st.markdown("##### Ubicación")
-            residence_type = st.selectbox(
-                "Tipo de Residencia",
-                VALID_RESIDENCE_TYPES,
-                help="Área de residencia del paciente"
-            )
+
         
         # Botón de predicción
         predict_button = st.form_submit_button("Realizar Predicción", type="primary")
