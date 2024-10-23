@@ -278,10 +278,105 @@ def modelo_xgboost():
             st.error(f"Error en el procesamiento: {str(e)}")
     
     st.markdown("</div>", unsafe_allow_html=True)
+
+@st.cache_resource
+def load_neural_model():
+    """Cargar el modelo de red neuronal y el pipeline."""
+    try:
+        model = load_model("keras_model_nn.keras")
+        pipeline = joblib.load("full_pipeline_nn.joblib")
+        return model, pipeline
+    except Exception as e:
+        st.error(f"Error al cargar el modelo neuronal: {str(e)}")
+        return None, None
+      
 def modelo_red_neuronal():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - Red Neuronal</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Esta sección está en desarrollo. Próximamente se implementará el modelo de red neuronal.</p>", unsafe_allow_html=True)
+    
+    model, pipeline = load_neural_model()
+    
+    if model is None or pipeline is None:
+        st.error("No se pudo cargar el modelo de red neuronal. Por favor, verifica que los archivos del modelo estén presentes.")
+        return
+    
+    st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
+    with st.form("patient_data_form_nn"):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
+            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años")
+            gender = st.selectbox("Género", ["Male", "Female"], help="Género del paciente")
+            ever_married = st.selectbox("Estado Civil", ["Yes", "No"], help="¿El paciente ha estado alguna vez casado?")
+        
+        with col2:
+            st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
+            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente")
+            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco")
+            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre")
+        
+        with col3:
+            st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
+            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente")
+            bmi = st.number_input("Índice de Masa Corporal (BMI)", min_value=10.0, max_value=50.0, value=25.0, help="Índice de masa corporal del paciente")
+            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?")
+            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?")
+        
+        predict_button = st.form_submit_button("Realizar Predicción", type="primary")
+
+    if predict_button:
+        try:
+            # Crear DataFrame con los datos del paciente
+            patient_data = pd.DataFrame({
+                'age': [age],
+                'gender': [gender],
+                'hypertension': [hypertension],
+                'heart_disease': [heart_disease],
+                'ever_married': [ever_married],
+                'work_type': [work_type],
+                'Residence_type': [residence_type],
+                'avg_glucose_level': [avg_glucose_level],
+                'bmi': [bmi],
+                'smoking_status': [smoking_status]
+            })
+            
+            # Procesar datos y realizar predicción
+            with st.spinner("Analizando factores de riesgo con red neuronal..."):
+                processed_data = pipeline.transform(patient_data)
+                prediction = model.predict(processed_data)
+                risk_score = prediction[0][0]  # Asumiendo que el modelo devuelve probabilidades
+
+            st.markdown("<h2 class='subtitle'>Resultados del Análisis Neural</h2>", unsafe_allow_html=True)
+            risk_status = "Alto Riesgo" if risk_score > 0.06 else "Bajo Riesgo"  # Umbral ajustado según el modelo neural
+            risk_color = "red" if risk_score > 0.06 else "green"
+            
+            st.markdown(f"""
+                <div style='background-color: {risk_color}; padding: 10px; border-radius: 5px;'>
+                    <h3 style='color: white; text-align: center;'>Estado: {risk_status}</h3>
+                    <p style='color: white; text-align: center;'>Probabilidad de derrame cerebral: {risk_score:.2%}</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.plotly_chart(create_gauge_chart(risk_score, "Riesgo de Derrame Cerebral (Red Neuronal)"))
+
+            st.markdown("<h2 class='subtitle'>Interpretación de Resultados</h2>", unsafe_allow_html=True)
+            if risk_score > 0.06:
+                st.warning("""
+                    El modelo de red neuronal indica un riesgo elevado de sufrir un derrame cerebral. 
+                    Se recomienda una evaluación médica inmediata y la implementación de medidas preventivas.
+                    Este resultado está basado en un análisis profundo de múltiples factores de riesgo.
+                """)
+            else:
+                st.success("""
+                    El modelo de red neuronal indica un riesgo bajo de sufrir un derrame cerebral. 
+                    Sin embargo, es importante mantener un estilo de vida saludable y realizar chequeos regulares.
+                    La red neuronal ha evaluado múltiples factores y sus interacciones para llegar a esta conclusión.
+                """)
+
+        except Exception as e:
+            st.error(f"Error en el procesamiento del modelo neural: {str(e)}")
+    
     st.markdown("</div>", unsafe_allow_html=True)
 
 def modelo_imagenes():
