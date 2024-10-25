@@ -8,6 +8,8 @@ from vision_aux import *
 import joblib
 import tensorflow
 from stroke_neuronal import StrokePredictor
+import streamlit as st
+from stroke_xg import load_model, modelo_xgboost
 
 
 
@@ -199,167 +201,6 @@ def main_page():
     st.markdown("<p class='description'>Selecciona una opción en el menú lateral para comenzar a utilizar nuestras herramientas de predicción.</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# def modelo_xgboost():
-#     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
-#     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - XGBoost</h1>", unsafe_allow_html=True)
-    
-#     model = load_model()
-    
-#     st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
-#     with st.form("patient_data_form"):
-#         col1, col2, col3 = st.columns(3)
-#         with col1:
-#             st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
-#             age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años")
-#             gender = st.selectbox("Género", ["Masculino", "Femenino"], help="Género del paciente")
-#             ever_married = st.selectbox("Estado Civil", ["Sí", "No"], help="¿El paciente ha estado alguna vez casado?")
-#         with col2:
-#             st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
-#             work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente")
-#             smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco")
-#             avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre")
-#         with col3:
-#             st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
-#             residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente")
-#             bmi = st.selectbox("Índice de Masa Corporal (BMI)", [1, 0], format_func=lambda x: "Sobrepeso" if x == 1 else "Normal", help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)")
-#             hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?")
-#             heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?")
-        
-#         predict_button = st.form_submit_button("Realizar Predicción", type="primary")
-
-#     if predict_button:
-#         try:
-#             input_data = pd.DataFrame({
-#                 'age': [age],
-#                 'hypertension': [hypertension],
-#                 'heart_disease': [heart_disease],
-#                 'work_type': [work_type],
-#                 'Residence_type': [residence_type],
-#                 'smoking_status': [smoking_status]
-#             })
-#             validate_input_data(input_data)
-            
-#             with st.spinner("Analizando factores de riesgo..."):
-#                 processed_data = process_input_data(input_data)
-#                 prediction = model.predict_proba(processed_data)
-#                 risk_score = prediction[0][1]
-
-#             st.markdown("<h2 class='subtitle'>Resultados del Análisis</h2>", unsafe_allow_html=True)
-#             risk_status = "Alto Riesgo" if risk_score > 0.165 else "Bajo Riesgo"
-#             risk_color = "red" if risk_score > 0.165 else "green"
-#             st.markdown(f"""
-#                 <div style='background-color: {risk_color}; padding: 10px; border-radius: 5px;'>
-#                     <h3 style='color: white; text-align: center;'>Estado: {risk_status}</h3>
-#                     <p style='color: white; text-align: center;'>Probabilidad de derrame cerebral: {risk_score:.2%}</p>
-#                 </div>
-#             """, unsafe_allow_html=True)
-
-#             st.plotly_chart(create_gauge_chart(risk_score, "Riesgo de Derrame Cerebral"))
-
-#             st.markdown("<h2 class='subtitle'>Interpretación de Resultados</h2>", unsafe_allow_html=True)
-#             if risk_score > 0.165:
-#                 st.warning("El paciente presenta un riesgo elevado de sufrir un derrame cerebral. Se recomienda una evaluación médica inmediata y la implementación de medidas preventivas.")
-#             else:
-#                 st.success("El paciente presenta un riesgo bajo de sufrir un derrame cerebral. Sin embargo, es importante mantener un estilo de vida saludable y realizar chequeos regulares.")
-
-#         except Exception as e:
-#             st.error(f"Error en el procesamiento: {str(e)}")
-    
-#     st.markdown("</div>", unsafe_allow_html=True)
-
-def modelo_xgboost():
-    # Add custom CSS for white labels
-    st.markdown("""
-        <style>
-        .white-label {
-            color: white !important;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
-    st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - XGBoost</h1>", unsafe_allow_html=True)
-    
-    model = load_model()
-    
-    st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
-    with st.form("patient_data_form"):
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Edad</p>", unsafe_allow_html=True)
-            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Género</p>", unsafe_allow_html=True)
-            gender = st.selectbox("Género", ["Masculino", "Femenino"], help="Género del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Estado Civil</p>", unsafe_allow_html=True)
-            ever_married = st.selectbox("Estado Civil", ["Sí", "No"], help="¿El paciente ha estado alguna vez casado?", label_visibility="collapsed")
-        
-        with col2:
-            st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Tipo de Trabajo</p>", unsafe_allow_html=True)
-            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Estado de Fumador</p>", unsafe_allow_html=True)
-            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Nivel Promedio de Glucosa</p>", unsafe_allow_html=True)
-            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre", label_visibility="collapsed")
-        
-        with col3:
-            st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Tipo de Residencia</p>", unsafe_allow_html=True)
-            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Índice de Masa Corporal (BMI)</p>", unsafe_allow_html=True)
-            bmi = st.selectbox("Índice de Masa Corporal (BMI)", [1, 0], format_func=lambda x: "Sobrepeso" if x == 1 else "Normal", help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Hipertensión</p>", unsafe_allow_html=True)
-            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Enfermedad Cardíaca</p>", unsafe_allow_html=True)
-            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?", label_visibility="collapsed")
-        
-        predict_button = st.form_submit_button("Realizar Predicción", type="primary")
-
-    if predict_button:
-        try:
-            input_data = pd.DataFrame({
-                'age': [age],
-                'hypertension': [hypertension],
-                'heart_disease': [heart_disease],
-                'work_type': [work_type],
-                'Residence_type': [residence_type],
-                'smoking_status': [smoking_status]
-            })
-            validate_input_data(input_data)
-            
-            with st.spinner("Analizando factores de riesgo..."):
-                processed_data = process_input_data(input_data)
-                prediction = model.predict_proba(processed_data)
-                risk_score = prediction[0][1]
-
-            st.markdown("<h2 class='subtitle'>Resultados del Análisis</h2>", unsafe_allow_html=True)
-            risk_status = "Alto Riesgo" if risk_score > 0.165 else "Bajo Riesgo"
-            risk_color = "red" if risk_score > 0.165 else "green"
-            st.markdown(f"""
-                <div style='background-color: {risk_color}; padding: 10px; border-radius: 5px;'>
-                    <h3 style='color: white; text-align: center;'>Estado: {risk_status}</h3>
-                    <p style='color: white; text-align: center;'>Probabilidad de derrame cerebral: {risk_score:.2%}</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            st.plotly_chart(create_gauge_chart(risk_score, "Riesgo de Derrame Cerebral"))
-
-            st.markdown("<h2 class='subtitle'>Interpretación de Resultados</h2>", unsafe_allow_html=True)
-            if risk_score > 0.165:
-                st.warning("El paciente presenta un riesgo elevado de sufrir un derrame cerebral. Se recomienda una evaluación médica inmediata y la implementación de medidas preventivas.")
-            else:
-                st.success("El paciente presenta un riesgo bajo de sufrir un derrame cerebral. Sin embargo, es importante mantener un estilo de vida saludable y realizar chequeos regulares.")
-
-        except Exception as e:
-            st.error(f"Error en el procesamiento: {str(e)}")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
 
 def modelo_imagenes():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
@@ -444,7 +285,7 @@ def main():
     if menu_option == "Página Principal":
         main_page()
     elif menu_option == "Modelo XGBoost":
-        modelo_xgboost()
+        modelo_xgboost(model)
     elif menu_option == "Modelo red neuronal":
         predictor = StrokePredictor()
         predictor.mostrar_prediccion_derrame()  
