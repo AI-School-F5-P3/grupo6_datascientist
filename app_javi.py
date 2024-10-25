@@ -3,10 +3,12 @@ import pandas as pd
 from xgboost import XGBClassifier
 import plotly.graph_objects as go
 import numpy as np
-
+from stroke_info import mostrar_informacion_prevencion
 from vision_aux import *
 import joblib
 import tensorflow
+from stroke_neuronal import StrokePredictor
+
 
 
 vision_model_path = 'models/vision_stroke_95.pth'
@@ -154,30 +156,7 @@ def process_input_data(raw_data):
     processed_data['Residence_type_Rural'] = (raw_data['Residence_type'].iloc[0] == 'Rural')
     return processed_data
 
-def create_gauge_chart(value, title):
-    """Crear un gráfico de gauge con Plotly."""
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=value * 100,
-        title={'text': title},
-        domain={'x': [0, 1], 'y': [0, 1]},
-        gauge={
-            'axis': {'range': [0, 100]},
-            'bar': {'color': "darkblue"},
-            'steps': [
-                {'range': [0, 33], 'color': "lightgreen"},
-                {'range': [33, 66], 'color': "yellow"},
-                {'range': [66, 100], 'color': "salmon"}
-            ],
-            'threshold': {
-                'line': {'color': "red", 'width': 4},
-                'thickness': 0.75,
-                'value': 16.5 * 100
-            }
-        }
-    ))
-    fig.update_layout(height=250)
-    return fig
+
 
 def main_page():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
@@ -382,133 +361,6 @@ def modelo_xgboost():
 
 
 
-@st.cache_resource
-def load_neural_model():
-    """Cargar el modelo de red neuronal y el pipeline."""
-    try:
-        model_nn = tensorflow.keras.models.load_model("models/keras_model_nn.keras")
-        pipeline_nn = joblib.load("models/full_pipeline_nn.joblib")
-        return model_nn, pipeline_nn
-    except Exception as e:
-        st.error(f"Error al cargar el modelo neuronal: {str(e)}")
-        return None, None
-    
-
-
-
-
-def modelo_red_neuronal():
-    # Add custom CSS for white labels
-    st.markdown("""
-        <style>
-        .white-label {
-            color: white !important;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
-    st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - Red Neuronal</h1>", unsafe_allow_html=True)
-    
-    model_nn, pipeline_nn = load_neural_model()
-    
-    if model_nn is None or pipeline_nn is None:
-        st.error("No se pudo cargar el modelo de red neuronal. Por favor, verifica que los archivos del modelo estén presentes.")
-        return
-    
-    st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
-    with st.form("patient_data_form_nn"):
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Edad</p>", unsafe_allow_html=True)
-            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Género</p>", unsafe_allow_html=True)
-            gender = st.selectbox("Género", ["Male", "Female"], help="Género del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Estado Civil</p>", unsafe_allow_html=True)
-            ever_married = st.selectbox("Estado Civil", ["Yes", "No"], help="¿El paciente ha estado alguna vez casado?", label_visibility="collapsed")
-        
-        with col2:
-            st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Tipo de Trabajo</p>", unsafe_allow_html=True)
-            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Estado de Fumador</p>", unsafe_allow_html=True)
-            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Nivel Promedio de Glucosa</p>", unsafe_allow_html=True)
-            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre", label_visibility="collapsed")
-        
-        with col3:
-            st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
-            st.markdown("<p class='white-label'>Tipo de Residencia</p>", unsafe_allow_html=True)
-            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Índice de Masa Corporal (BMI)</p>", unsafe_allow_html=True)
-            bmi = st.number_input("Índice de Masa Corporal (BMI)", min_value=10.0, max_value=50.0, value=25.0, help="Índice de masa corporal del paciente", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Hipertensión</p>", unsafe_allow_html=True)
-            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?", label_visibility="collapsed")
-            st.markdown("<p class='white-label'>Enfermedad Cardíaca</p>", unsafe_allow_html=True)
-            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?", label_visibility="collapsed")
-        
-        predict_button = st.form_submit_button("Realizar Predicción", type="primary")
-
-    # Rest of the code remains the same...
-    if predict_button:
-        try:
-            patient_data = pd.DataFrame({
-                'age': [age],
-                'gender': [gender],
-                'hypertension': [hypertension],
-                'heart_disease': [heart_disease],
-                'ever_married': [ever_married],
-                'work_type': [work_type],
-                'Residence_type': [residence_type],
-                'avg_glucose_level': [avg_glucose_level],
-                'bmi': [bmi],
-                'smoking_status': [smoking_status]
-            })
-            
-            with st.spinner("Analizando factores de riesgo con red neuronal..."):
-                processed_data = pipeline_nn.transform(patient_data)
-                prediction = model_nn.predict(processed_data)
-                risk_score = prediction[0][0]
-
-            st.markdown("<h2 class='subtitle'>Resultados del Análisis Neural</h2>", unsafe_allow_html=True)
-            risk_status = "Alto Riesgo" if risk_score > 0.06 else "Bajo Riesgo"
-            risk_color = "red" if risk_score > 0.06 else "green"
-            
-            st.markdown(f"""
-                <div style='background-color: {risk_color}; padding: 10px; border-radius: 5px;'>
-                    <h3 style='color: white; text-align: center;'>Estado: {risk_status}</h3>
-                    <p style='color: white; text-align: center;'>Probabilidad de derrame cerebral: {risk_score:.2%}</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            st.plotly_chart(create_gauge_chart(risk_score, "Riesgo de Derrame Cerebral (Red Neuronal)"))
-
-            st.markdown("<h2 class='subtitle'>Interpretación de Resultados</h2>", unsafe_allow_html=True)
-            if risk_score > 0.06:
-                st.warning("""
-                    El modelo de red neuronal indica un riesgo elevado de sufrir un derrame cerebral. 
-                    Se recomienda una evaluación médica inmediata y la implementación de medidas preventivas.
-                    Este resultado está basado en un análisis profundo de múltiples factores de riesgo.
-                """)
-            else:
-                st.success("""
-                    El modelo de red neuronal indica un riesgo bajo de sufrir un derrame cerebral. 
-                    Sin embargo, es importante mantener un estilo de vida saludable y realizar chequeos regulares.
-                    La red neuronal ha evaluado múltiples factores y sus interacciones para llegar a esta conclusión.
-                """)
-
-        except Exception as e:
-            st.error(f"Error en el procesamiento del modelo neural: {str(e)}")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-
 def modelo_imagenes():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - Modelo por Imágenes</h1>", unsafe_allow_html=True)
@@ -578,69 +430,6 @@ def modelo_imagenes():
         except Exception as e:
             print_error(str(e))
 
-def informacion_prevencion():
-    st.markdown("<div class='main-container'>", unsafe_allow_html=True)
-    st.markdown("<h1 class='title'>Información y Prevención de Ictus</h1>", unsafe_allow_html=True)
-    
-    st.markdown("<h2 class='subtitle'>¿Qué es un Ictus?</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Un ictus, también conocido como accidente cerebrovascular (ACV), ocurre cuando el suministro de sangre a una parte del cerebro se interrumpe o se reduce, privando al tejido cerebral de oxígeno y nutrientes.</p>", unsafe_allow_html=True)
-
-    st.markdown("<h2 class='subtitle'>Factores de Riesgo</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Algunos factores de riesgo incluyen:</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul style="color: white;">
-        <li>Hipertensión arterial</li>
-        <li>Diabetes</li>
-        <li>Colesterol alto</li>
-        <li>Tabaquismo</li>
-        <li>Obesidad</li>
-        <li>Sedentarismo</li>
-        <li>Edad avanzada</li>
-        <li>Antecedentes familiares</li>
-    </ul>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<h2 class='subtitle'>Síntomas de Alerta</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Es crucial reconocer los síntomas de un ictus para actuar rápidamente:</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul style="color: white;">
-        <li>Debilidad o entumecimiento repentino en la cara, brazo o pierna, especialmente en un lado del cuerpo</li>
-        <li>Confusión súbita o dificultad para hablar o entender</li>
-        <li>Problemas repentinos de visión en uno o ambos ojos</li>
-        <li>Dificultad repentina para caminar, mareo, pérdida de equilibrio o coordinación</li>
-        <li>Dolor de cabeza severo sin causa conocida</li>
-    </ul>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<h2 class='subtitle'>Prevención</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Algunas medidas para prevenir un ictus incluyen:</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul style="color: white;">
-        <li>Controlar la presión arterial</li>
-        <li>Mantener una dieta saludable y equilibrada</li>
-        <li>Realizar actividad física regularmente</li>
-        <li>Dejar de fumar</li>
-        <li>Limitar el consumo de alcohol</li>
-        <li>Controlar el estrés</li>
-        <li>Realizar chequeos médicos regulares</li>
-    </ul>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<h2 class='subtitle'>Actuación en caso de Ictus</h2>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Si sospechas que alguien está sufriendo un ictus, recuerda el acrónimo FAST:</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul style="color: white;">
-        <li><strong style="color: white;">F</strong>ace (Cara): Pide a la persona que sonría. ¿Un lado de la cara cae?</li>
-        <li><strong style="color: white;">A</strong>rms (Brazos): Pide que levante ambos brazos. ¿Uno de los brazos cae?</li>
-        <li><strong style="color: white;">S</strong>peech (Habla): Pide que repita una frase simple. ¿El habla es confusa o extraña?</li>
-        <li><strong style="color: white;">T</strong>ime (Tiempo): Si observas cualquiera de estos signos, llama inmediatamente a emergencias.</li>
-    </ul>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<p class='description'>Recuerda, en caso de ictus, cada minuto cuenta. La atención médica inmediata puede marcar la diferencia entre la recuperación y la discapacidad permanente.</p>", unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
 def main():
     # Cargar el modelo
     model = load_model()
@@ -657,11 +446,14 @@ def main():
     elif menu_option == "Modelo XGBoost":
         modelo_xgboost()
     elif menu_option == "Modelo red neuronal":
-        modelo_red_neuronal()
+        predictor = StrokePredictor()
+        predictor.mostrar_prediccion_derrame()  
     elif menu_option == "Modelo por imágenes":
         modelo_imagenes()
     elif menu_option == "Información y prevención Ictus":
-        informacion_prevencion()
+        mostrar_informacion_prevencion()
 
 if __name__ == "__main__":
     main()
+    
+    
