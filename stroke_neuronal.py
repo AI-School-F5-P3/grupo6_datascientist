@@ -205,7 +205,7 @@ class StrokePredictor:
             }
 
             health_fields = {
-                'residence_type': {'type': 'select', 'label': 'Tipo de Residencia', 'options': VALID_RESIDENCE_TYPES, 'help': 'Área de residencia del paciente'},
+                'Residence_type': {'type': 'select', 'label': 'Tipo de Residencia', 'options': VALID_RESIDENCE_TYPES, 'help': 'Área de residencia del paciente'},
                 'bmi': {'type': 'number', 'label': 'Índice de Masa Corporal (BMI)', 'min': 10.0, 'max': 50.0, 'default': 25.0, 'help': 'Índice de masa corporal del paciente'},
                 'hypertension': {'type': 'select', 'label': 'Hipertensión', 'options': [0, 1], 'format_func': lambda x: "Sí" if x == 1 else "No", 'help': '¿El paciente tiene hipertensión diagnosticada?'},
                 'heart_disease': {'type': 'select', 'label': 'Enfermedad Cardíaca', 'options': [0, 1], 'format_func': lambda x: "Sí" if x == 1 else "No", 'help': '¿El paciente tiene alguna enfermedad cardíaca diagnosticada?'}
