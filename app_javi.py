@@ -4,6 +4,15 @@ from xgboost import XGBClassifier
 import plotly.graph_objects as go
 import numpy as np
 
+from vision_aux import *
+import joblib
+import tensorflow
+
+
+vision_model_path = 'models/vision_stroke_95.pth'
+vision_model = load_model_image(vision_model_path)
+
+
 # Configuración de la página
 st.set_page_config(
     page_title="Predictor de Riesgo de Derrame Cerebral",
@@ -107,7 +116,7 @@ def load_model():
     """Cargar el modelo XGBoost."""
     try:
         model = XGBClassifier()
-        model.load_model("xgboost_stroke_model_final.bin")
+        model.load_model("models/xgboost_stroke_model_final.bin")
         return model
     except Exception as e:
         st.error(f"Error al cargar el modelo: {str(e)}")
@@ -211,7 +220,86 @@ def main_page():
     st.markdown("<p class='description'>Selecciona una opción en el menú lateral para comenzar a utilizar nuestras herramientas de predicción.</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+# def modelo_xgboost():
+#     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
+#     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - XGBoost</h1>", unsafe_allow_html=True)
+    
+#     model = load_model()
+    
+#     st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
+#     with st.form("patient_data_form"):
+#         col1, col2, col3 = st.columns(3)
+#         with col1:
+#             st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
+#             age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años")
+#             gender = st.selectbox("Género", ["Masculino", "Femenino"], help="Género del paciente")
+#             ever_married = st.selectbox("Estado Civil", ["Sí", "No"], help="¿El paciente ha estado alguna vez casado?")
+#         with col2:
+#             st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
+#             work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente")
+#             smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco")
+#             avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre")
+#         with col3:
+#             st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
+#             residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente")
+#             bmi = st.selectbox("Índice de Masa Corporal (BMI)", [1, 0], format_func=lambda x: "Sobrepeso" if x == 1 else "Normal", help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)")
+#             hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?")
+#             heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?")
+        
+#         predict_button = st.form_submit_button("Realizar Predicción", type="primary")
+
+#     if predict_button:
+#         try:
+#             input_data = pd.DataFrame({
+#                 'age': [age],
+#                 'hypertension': [hypertension],
+#                 'heart_disease': [heart_disease],
+#                 'work_type': [work_type],
+#                 'Residence_type': [residence_type],
+#                 'smoking_status': [smoking_status]
+#             })
+#             validate_input_data(input_data)
+            
+#             with st.spinner("Analizando factores de riesgo..."):
+#                 processed_data = process_input_data(input_data)
+#                 prediction = model.predict_proba(processed_data)
+#                 risk_score = prediction[0][1]
+
+#             st.markdown("<h2 class='subtitle'>Resultados del Análisis</h2>", unsafe_allow_html=True)
+#             risk_status = "Alto Riesgo" if risk_score > 0.165 else "Bajo Riesgo"
+#             risk_color = "red" if risk_score > 0.165 else "green"
+#             st.markdown(f"""
+#                 <div style='background-color: {risk_color}; padding: 10px; border-radius: 5px;'>
+#                     <h3 style='color: white; text-align: center;'>Estado: {risk_status}</h3>
+#                     <p style='color: white; text-align: center;'>Probabilidad de derrame cerebral: {risk_score:.2%}</p>
+#                 </div>
+#             """, unsafe_allow_html=True)
+
+#             st.plotly_chart(create_gauge_chart(risk_score, "Riesgo de Derrame Cerebral"))
+
+#             st.markdown("<h2 class='subtitle'>Interpretación de Resultados</h2>", unsafe_allow_html=True)
+#             if risk_score > 0.165:
+#                 st.warning("El paciente presenta un riesgo elevado de sufrir un derrame cerebral. Se recomienda una evaluación médica inmediata y la implementación de medidas preventivas.")
+#             else:
+#                 st.success("El paciente presenta un riesgo bajo de sufrir un derrame cerebral. Sin embargo, es importante mantener un estilo de vida saludable y realizar chequeos regulares.")
+
+#         except Exception as e:
+#             st.error(f"Error en el procesamiento: {str(e)}")
+    
+#     st.markdown("</div>", unsafe_allow_html=True)
+
 def modelo_xgboost():
+    # Add custom CSS for white labels
+    st.markdown("""
+        <style>
+        .white-label {
+            color: white !important;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - XGBoost</h1>", unsafe_allow_html=True)
     
@@ -220,22 +308,35 @@ def modelo_xgboost():
     st.markdown("<h2 class='subtitle'>📝 Información del Paciente</h2>", unsafe_allow_html=True)
     with st.form("patient_data_form"):
         col1, col2, col3 = st.columns(3)
+        
         with col1:
             st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
-            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años")
-            gender = st.selectbox("Género", ["Masculino", "Femenino"], help="Género del paciente")
-            ever_married = st.selectbox("Estado Civil", ["Sí", "No"], help="¿El paciente ha estado alguna vez casado?")
+            st.markdown("<p class='white-label'>Edad</p>", unsafe_allow_html=True)
+            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Género</p>", unsafe_allow_html=True)
+            gender = st.selectbox("Género", ["Masculino", "Femenino"], help="Género del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Estado Civil</p>", unsafe_allow_html=True)
+            ever_married = st.selectbox("Estado Civil", ["Sí", "No"], help="¿El paciente ha estado alguna vez casado?", label_visibility="collapsed")
+        
         with col2:
             st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
-            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente")
-            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco")
-            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre")
+            st.markdown("<p class='white-label'>Tipo de Trabajo</p>", unsafe_allow_html=True)
+            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Estado de Fumador</p>", unsafe_allow_html=True)
+            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Nivel Promedio de Glucosa</p>", unsafe_allow_html=True)
+            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre", label_visibility="collapsed")
+        
         with col3:
             st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
-            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente")
-            bmi = st.selectbox("Índice de Masa Corporal (BMI)", [1, 0], format_func=lambda x: "Sobrepeso" if x == 1 else "Normal", help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)")
-            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?")
-            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?")
+            st.markdown("<p class='white-label'>Tipo de Residencia</p>", unsafe_allow_html=True)
+            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Índice de Masa Corporal (BMI)</p>", unsafe_allow_html=True)
+            bmi = st.selectbox("Índice de Masa Corporal (BMI)", [1, 0], format_func=lambda x: "Sobrepeso" if x == 1 else "Normal", help="¿El paciente tiene sobrepeso? (1: Sí, 0: No)", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Hipertensión</p>", unsafe_allow_html=True)
+            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Enfermedad Cardíaca</p>", unsafe_allow_html=True)
+            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?", label_visibility="collapsed")
         
         predict_button = st.form_submit_button("Realizar Predicción", type="primary")
 
@@ -279,24 +380,41 @@ def modelo_xgboost():
     
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+
 @st.cache_resource
 def load_neural_model():
     """Cargar el modelo de red neuronal y el pipeline."""
     try:
-        model = load_model("keras_model_nn.keras")
-        pipeline = joblib.load("full_pipeline_nn.joblib")
-        return model, pipeline
+        model_nn = tensorflow.keras.models.load_model("models/keras_model_nn.keras")
+        pipeline_nn = joblib.load("models/full_pipeline_nn.joblib")
+        return model_nn, pipeline_nn
     except Exception as e:
         st.error(f"Error al cargar el modelo neuronal: {str(e)}")
         return None, None
-      
+    
+
+
+
+
 def modelo_red_neuronal():
+    # Add custom CSS for white labels
+    st.markdown("""
+        <style>
+        .white-label {
+            color: white !important;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - Red Neuronal</h1>", unsafe_allow_html=True)
     
-    model, pipeline = load_neural_model()
+    model_nn, pipeline_nn = load_neural_model()
     
-    if model is None or pipeline is None:
+    if model_nn is None or pipeline_nn is None:
         st.error("No se pudo cargar el modelo de red neuronal. Por favor, verifica que los archivos del modelo estén presentes.")
         return
     
@@ -306,28 +424,38 @@ def modelo_red_neuronal():
         
         with col1:
             st.markdown("<p class='white-subheader'>Datos Demográficos</p>", unsafe_allow_html=True)
-            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años")
-            gender = st.selectbox("Género", ["Male", "Female"], help="Género del paciente")
-            ever_married = st.selectbox("Estado Civil", ["Yes", "No"], help="¿El paciente ha estado alguna vez casado?")
+            st.markdown("<p class='white-label'>Edad</p>", unsafe_allow_html=True)
+            age = st.number_input("Edad", min_value=0, max_value=120, value=25, help="Edad del paciente en años", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Género</p>", unsafe_allow_html=True)
+            gender = st.selectbox("Género", ["Male", "Female"], help="Género del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Estado Civil</p>", unsafe_allow_html=True)
+            ever_married = st.selectbox("Estado Civil", ["Yes", "No"], help="¿El paciente ha estado alguna vez casado?", label_visibility="collapsed")
         
         with col2:
             st.markdown("<p class='white-subheader'>Estilo de Vida</p>", unsafe_allow_html=True)
-            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente")
-            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco")
-            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre")
+            st.markdown("<p class='white-label'>Tipo de Trabajo</p>", unsafe_allow_html=True)
+            work_type = st.selectbox("Tipo de Trabajo", VALID_WORK_TYPES, help="Sector laboral principal del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Estado de Fumador</p>", unsafe_allow_html=True)
+            smoking_status = st.selectbox("Estado de Fumador", VALID_SMOKING_STATUS, help="Historial de consumo de tabaco", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Nivel Promedio de Glucosa</p>", unsafe_allow_html=True)
+            avg_glucose_level = st.number_input("Nivel Promedio de Glucosa", min_value=0.0, max_value=300.0, value=100.0, help="Nivel promedio de glucosa en sangre", label_visibility="collapsed")
         
         with col3:
             st.markdown("<p class='white-subheader'>Ubicación y Salud</p>", unsafe_allow_html=True)
-            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente")
-            bmi = st.number_input("Índice de Masa Corporal (BMI)", min_value=10.0, max_value=50.0, value=25.0, help="Índice de masa corporal del paciente")
-            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?")
-            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?")
+            st.markdown("<p class='white-label'>Tipo de Residencia</p>", unsafe_allow_html=True)
+            residence_type = st.selectbox("Tipo de Residencia", VALID_RESIDENCE_TYPES, help="Área de residencia del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Índice de Masa Corporal (BMI)</p>", unsafe_allow_html=True)
+            bmi = st.number_input("Índice de Masa Corporal (BMI)", min_value=10.0, max_value=50.0, value=25.0, help="Índice de masa corporal del paciente", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Hipertensión</p>", unsafe_allow_html=True)
+            hypertension = st.selectbox("Hipertensión", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene hipertensión diagnosticada?", label_visibility="collapsed")
+            st.markdown("<p class='white-label'>Enfermedad Cardíaca</p>", unsafe_allow_html=True)
+            heart_disease = st.selectbox("Enfermedad Cardíaca", [0, 1], format_func=lambda x: "Sí" if x == 1 else "No", help="¿El paciente tiene alguna enfermedad cardíaca diagnosticada?", label_visibility="collapsed")
         
         predict_button = st.form_submit_button("Realizar Predicción", type="primary")
 
+    # Rest of the code remains the same...
     if predict_button:
         try:
-            # Crear DataFrame con los datos del paciente
             patient_data = pd.DataFrame({
                 'age': [age],
                 'gender': [gender],
@@ -341,14 +469,13 @@ def modelo_red_neuronal():
                 'smoking_status': [smoking_status]
             })
             
-            # Procesar datos y realizar predicción
             with st.spinner("Analizando factores de riesgo con red neuronal..."):
-                processed_data = pipeline.transform(patient_data)
-                prediction = model.predict(processed_data)
-                risk_score = prediction[0][0]  # Asumiendo que el modelo devuelve probabilidades
+                processed_data = pipeline_nn.transform(patient_data)
+                prediction = model_nn.predict(processed_data)
+                risk_score = prediction[0][0]
 
             st.markdown("<h2 class='subtitle'>Resultados del Análisis Neural</h2>", unsafe_allow_html=True)
-            risk_status = "Alto Riesgo" if risk_score > 0.06 else "Bajo Riesgo"  # Umbral ajustado según el modelo neural
+            risk_status = "Alto Riesgo" if risk_score > 0.06 else "Bajo Riesgo"
             risk_color = "red" if risk_score > 0.06 else "green"
             
             st.markdown(f"""
@@ -379,11 +506,77 @@ def modelo_red_neuronal():
     
     st.markdown("</div>", unsafe_allow_html=True)
 
+
+
+
 def modelo_imagenes():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Predictor de Riesgo de Derrame Cerebral - Modelo por Imágenes</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='description'>Esta sección está en desarrollo. Próximamente se implementará el modelo basado en imágenes.</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+    uploaded_file = st.file_uploader("Cargue un Scan para analizar", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        try:
+            # Open the uploaded image directly
+            image = Image.open(uploaded_file)
+            
+            # Define the path where the image will be saved temporarily
+            temp_file_path = f"./temp_image_{uploaded_file.name}"
+            
+            # Save the image with the same format as uploaded
+            image.save(temp_file_path, format=image.format)
+
+            # Preprocess the image using the saved path
+            image_tensor = preprocess_image(temp_file_path)
+            
+            # Center the image and button using columns
+            col1, col2, col3 = st.columns([1, 2, 1])
+
+            with col2:
+                # Display the centered image
+                st.image(temp_file_path, caption='Scan cargado', use_column_width=False, width=400)
+                
+
+                st.markdown(
+                """
+                <style>
+                .stButton > button {
+                    width: 115px;
+                    margin-left: 150px;  /* Adjust this value to move button left/right */
+                    margin-top: 10px;   /* Add some space between image and button */
+                    height: 50px;       /* Set button height */
+                    font-size: 16px;    /* Set font size */
+                }
+                </style>
+                """, 
+                unsafe_allow_html=True
+                )
+
+                # Center the button
+                if st.button('Predicción'):
+                    predicted_class, probability = predict_image(vision_model, image_tensor)
+
+                    st.write("")
+                    st.write("")
+                    print_outcome(predicted_class, probability)
+
+
+
+
+            # # Display the uploaded image
+            # st.image(temp_file_path, caption='Scan cargado', use_column_width=False,  width=250)
+
+            # if st.button('Predicción'):
+            #     predicted_class, probability = predict(vision_model, image_tensor)
+            #     print_outcome(predicted_class, probability)
+
+            # Clean up: remove the temporary file after processing
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+        except Exception as e:
+            print_error(str(e))
 
 def informacion_prevencion():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
