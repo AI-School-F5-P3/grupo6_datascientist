@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import numpy as np
 from stroke_info import mostrar_informacion_prevencion
 from vision_aux import *
+from db_aux import *
 import joblib
 import tensorflow
 from stroke_neuronal import StrokePredictor
@@ -115,51 +116,6 @@ VALID_WORK_TYPES = ["Private", "Self-employed", "Govt_job", "children"]
 VALID_SMOKING_STATUS = ["never smoked", "formerly smoked", "smokes", "Unknown"]
 VALID_RESIDENCE_TYPES = ["Urban", "Rural"]
 
-@st.cache_resource
-def load_model():
-    """Cargar el modelo XGBoost."""
-    try:
-        model = XGBClassifier()
-        model.load_model("models/xgboost_stroke_model_final.bin")
-        return model
-    except Exception as e:
-        st.error(f"Error al cargar el modelo: {str(e)}")
-        return None
-
-def validate_input_data(input_data):
-    """Validar los datos de entrada."""
-    errors = []
-    if input_data['age'].iloc[0] < 0 or input_data['age'].iloc[0] > 120:
-        errors.append("La edad debe estar entre 0 y 120 años")
-    if input_data['work_type'].iloc[0] not in VALID_WORK_TYPES:
-        errors.append("Tipo de trabajo no válido")
-    if input_data['smoking_status'].iloc[0] not in VALID_SMOKING_STATUS:
-        errors.append("Estado de fumador no válido")
-    if input_data['Residence_type'].iloc[0] not in VALID_RESIDENCE_TYPES:
-        errors.append("Tipo de residencia no válido")
-    for field in ['hypertension', 'heart_disease']:
-        if input_data[field].iloc[0] not in [0, 1]:
-            errors.append(f"El campo {field} debe ser 0 o 1")
-    if errors:
-        raise ValueError("\n".join(errors))
-
-def process_input_data(raw_data):
-    """Procesar y preparar los datos de entrada para la predicción."""
-    required_columns = [
-        'age', 'smoking_status_never smoked', 'hypertension', 'work_type_Private',
-        'Residence_type_Rural', 'heart_disease'
-    ]
-    processed_data = pd.DataFrame(0, index=[0], columns=required_columns)
-    processed_data['age'] = raw_data['age'].iloc[0]
-    processed_data['hypertension'] = raw_data['hypertension'].iloc[0]
-    processed_data['heart_disease'] = raw_data['heart_disease'].iloc[0]
-    processed_data['smoking_status_never smoked'] = (raw_data['smoking_status'].iloc[0] == 'never smoked')
-    processed_data['work_type_Private'] = (raw_data['work_type'].iloc[0] == 'Private')
-    processed_data['Residence_type_Rural'] = (raw_data['Residence_type'].iloc[0] == 'Rural')
-    return processed_data
-
-
-
 def main_page():
     st.markdown("<div class='main-container'>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>Bienvenido al Predictor de Riesgo de Derrame Cerebral</h1>", unsafe_allow_html=True)
@@ -254,17 +210,6 @@ def modelo_imagenes():
                     st.write("")
                     print_outcome(predicted_class, probability)
 
-
-
-
-            # # Display the uploaded image
-            # st.image(temp_file_path, caption='Scan cargado', use_column_width=False,  width=250)
-
-            # if st.button('Predicción'):
-            #     predicted_class, probability = predict(vision_model, image_tensor)
-            #     print_outcome(predicted_class, probability)
-
-            # Clean up: remove the temporary file after processing
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
@@ -285,7 +230,7 @@ def main():
     if menu_option == "Página Principal":
         main_page()
     elif menu_option == "Modelo XGBoost":
-        modelo_xgboost(model)
+        modelo_xgboost()
     elif menu_option == "Modelo red neuronal":
         predictor = StrokePredictor()
         predictor.mostrar_prediccion_derrame()  
