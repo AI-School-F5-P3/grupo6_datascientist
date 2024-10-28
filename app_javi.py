@@ -217,8 +217,6 @@ def modelo_imagenes():
             print_error(str(e))
 
 def main():
-    # Cargar el modelo
-    model = load_model()
 
     # Menú desplegable en la barra lateral
     st.sidebar.markdown("<h1 style='text-align: center; color: black;'>Menú</h1>", unsafe_allow_html=True)
