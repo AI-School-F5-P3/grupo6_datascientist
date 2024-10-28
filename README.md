@@ -44,8 +44,7 @@ python app.py
 
 ## Estructura del proyecto
 
-main.py: Script principal que ejecuta el programa.
-data/: Contiene los datos utilizados para el entrenamiento y pruebas.
-models/: Almacena los modelos entrenados y sus configuraciones.
-notebooks/: Jupyter notebooks utilizados para el análisis y experimentación.
-reports/: Documentos e informes de rendimiento y clasificación del modelo.
+**archivos raiz:** Script principal que ejecuta el programa.
+**test/:** Contiene los test realizados sobre la app.
+**eda_training/:** Almacena la configuraciones de cada modelo.
+**Models:** Almacena los modelos entrenados.
