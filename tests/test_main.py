@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import streamlit as st
 import pandas as pd
-from app_javi import (
+from app import (
     VALID_WORK_TYPES,
     VALID_SMOKING_STATUS, 
     VALID_RESIDENCE_TYPES,
@@ -36,7 +36,7 @@ def test_valid_constants():
     assert "Urban" in VALID_RESIDENCE_TYPES
     assert "Rural" in VALID_RESIDENCE_TYPES
 
-@patch('app_javi.load_model_image')
+@patch('app.load_model_image')
 def test_load_models(mock_load_model_image):
     """Test que la carga de modelos funciona correctamente"""
     # Configure el mock
@@ -75,11 +75,11 @@ def test_create_sidebar_menu(mock_selectbox):
     # Verificar el valor retornado
     assert result == "Página Principal"
 
-@patch('app_javi.main_page')
-@patch('app_javi.modelo_xgboost')
-@patch('app_javi.StrokePredictor')
-@patch('app_javi.modelo_imagenes')
-@patch('app_javi.mostrar_informacion_prevencion')
+@patch('main_page')
+@patch('modelo_xgboost')
+@patch('StrokePredictor')
+@patch('modelo_imagenes')
+@patch('mostrar_informacion_prevencion')
 def test_handle_menu_selection(mock_info, mock_imagenes, 
                              mock_predictor, mock_xgboost, 
                              mock_main):
