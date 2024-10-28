@@ -14,7 +14,7 @@ Este proyecto tiene como objetivo desarrollar un prototipo de modelo de intelige
 - **Pandas**: Para el manejo y procesamiento de datos.
 - **Streamlit**: Interface grafica de usuario realizada con Streamlit
 - **Git y GitHub**: Control de versiones y colaboración.
-- **Trello** (u otras herramientas organizativas): Para la planificación y gestión del proyecto.
+- **Trello** Para la planificación y gestión del proyecto.
 
 ## Requisitos previos
 Para ejecutar este proyecto necesitarás:
