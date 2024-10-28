@@ -45,6 +45,9 @@ python app.py
 ## Estructura del proyecto
 
 **archivos raiz:** Script principal que ejecuta el programa.
+
 **test/:** Contiene los test realizados sobre la app.
+
 **eda_training/:** Almacena la configuraciones de cada modelo.
+
 **Models:** Almacena los modelos entrenados.
