@@ -11,6 +11,7 @@ from stroke_neuronal import StrokePredictor
 from stroke_xg import load_model, modelo_xgboost
 from stroke_pictures import modelo_imagenes
 
+
 # Constantes
 VALID_WORK_TYPES = ["Private", "Self-employed", "Govt_job", "children"]
 VALID_SMOKING_STATUS = ["never smoked", "formerly smoked", "smokes", "Unknown"]

@@ -75,24 +75,24 @@ def test_create_sidebar_menu(mock_selectbox):
     # Verificar el valor retornado
     assert result == "Página Principal"
 
-@patch('main_page')
-@patch('modelo_xgboost')
-@patch('StrokePredictor')
-@patch('modelo_imagenes')
-@patch('mostrar_informacion_prevencion')
+@patch('app.main_page')
+@patch('stroke_xg.modelo_xgboost')
+@patch('stroke_neuronal.StrokePredictor')
+@patch('stroke_pictures.modelo_imagenes')
+@patch('stroke_info.mostrar_informacion_prevencion')
 def test_handle_menu_selection(mock_info, mock_imagenes, 
-                             mock_predictor, mock_xgboost, 
-                             mock_main):
+                             mock_predictor, mock_modelo_xgboost, 
+                             mock_main_page):
     """Test que handle_menu_selection llama a la función correcta según la opción"""
     models = {'vision': MagicMock()}
     
     # Test Página Principal
     handle_menu_selection("Página Principal", models)
-    mock_main.assert_called_once()
+    mock_main_page.assert_called_once()
     
     # Test Modelo XGBoost
     handle_menu_selection("Modelo XGBoost", models)
-    mock_xgboost.assert_called_once()
+    mock_modelo_xgboost.assert_called_once()
     
     # Test Modelo red neuronal
     predictor_instance = MagicMock()
