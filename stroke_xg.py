@@ -5,6 +5,7 @@ import tensorflow
 import joblib
 import pickle
 import xgboost as xgb
+from db_aux import engine
 
 # Definición de constantes
 VALID_WORK_TYPES = ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
